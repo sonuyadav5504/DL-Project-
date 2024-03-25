@@ -105,37 +105,37 @@ if __name__ == "__main__":
     assert data.num_users == len(history_u)
     assert data.num_items == len(history_i)
 
-    train_u, train_i, train_r = [], [], []
-    val_u, val_i, val_r = [], [], []
-    test_u, test_i, test_r = [], [], []
+    train_u , train_i , train_r = [] , [] , []
+    val_u , val_i , val_r = [] , [] , []
+    test_u , test_i , test_r = [] , [] , []
 
     ratings_val = ratings[ratings['val_mask']]
     ratings_test = ratings[ratings['test_mask']]
 
-    for u, i, r in zip(ratings_train['user_idx'], ratings_train['item_idx'], ratings_train['rating']):
+    for u, i, r in zip(ratings_train['user_idx'] , ratings_train['item_idx'] , ratings_train['rating']):
         train_u.append(u)
         train_i.append(i)
         train_r.append(r)
 
-    for u, i, r in zip(ratings_val['user_idx'], ratings_val['item_idx'], ratings_val['rating']):
+    for u, i, r in zip(ratings_val['user_idx'] , ratings_val['item_idx'] , ratings_val['rating']):
         val_u.append(u)
         val_i.append(i)
         val_r.append(r)
 
-    for u, i, r in zip(ratings_test['user_idx'], ratings_test['item_idx'], ratings_test['rating']):
+    for u, i, r in zip(ratings_test['user_idx'] , ratings_test['item_idx'] , ratings_test['rating']):
         test_u.append(u)
         test_i.append(i)
         test_r.append(r)
 
     social_neighbor = {}
     num_neighbor = 0
-    with open('ciao_trust.txt', 'r', encoding='utf-8') as f:
+    with open('ciao_trust.txt' , 'r' , encoding='utf-8') as f:
         for line in f:
-            user1id, user2id = line.strip().split('  ')
-            user1id, user2id = int(float(user1id)), int(float(user2id))
+            user1id , user2id = line.strip().split('  ')
+            user1id , user2id = int(float(user1id)) , int(float(user2id))
             if user1id not in data.users_invmap or user2id not in data.users_invmap:
                 continue
-            user1id_idx, user2id_idx = data.users_invmap[user1id], data.users_invmap[user2id]
+            user1id_idx , user2id_idx = data.users_invmap[user1id] , data.users_invmap[user2id]
             if user1id_idx not in social_neighbor:
                 social_neighbor[user1id_idx] = []
             social_neighbor[user1id_idx].append(user2id_idx)
@@ -151,13 +151,13 @@ if __name__ == "__main__":
     val_rank = {}
     test_rank = {}
 
-    for u, i, r in zip(val_u, val_i, val_r):
+    for u, i, r in zip(val_u , val_i , val_r):
         if r < 3:
             continue
         neg_samples = data.neg_val[u]
-        val_rank[u] = {'pos': i, 'neg':neg_samples}
+        val_rank[u] = {'pos': i , 'neg':neg_samples}
 
-    for u, i, r in zip(test_u, test_i, test_r):
+    for u, i, r in zip(test_u , test_i , test_r):
         if r < 3:
             continue
         neg_samples = data.neg_test[u]
