@@ -8,13 +8,11 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics import mean_absolute_error
 from math import sqrt
 import os
-from utils import config
 
 class GraphRec(nn.Module):
     def __init__(self , num_users , num_items , num_ratings , history_u , history_i , history_ur ,\
                                      history_ir , embed_dim , social_neighbor , cuda = 'cpu'):
         super(GraphRec, self).__init__()
-
         self.embed_dim = embed_dim
         u2e = nn.Embedding(num_users , self.embed_dim)
         i2e = nn.Embedding(num_items , self.embed_dim)
@@ -24,7 +22,6 @@ class GraphRec(nn.Module):
         self.enc_social = social_aggregator(None , u2e , embed_dim , social_neighbor , cuda)
 
         self.w_u = nn.Linear(2*self.embed_dim , self.embed_dim)
-
         self.w_ur1 = nn.Linear(self.embed_dim , self.embed_dim)
         self.w_ur2 = nn.Linear(self.embed_dim , self.embed_dim)
         self.w_ir1 = nn.Linear(self.embed_dim , self.embed_dim)
@@ -64,9 +61,7 @@ class GraphRec(nn.Module):
 
     def loss(self , nodes_u , nodes_i , ratings):
         scores = self.forward(nodes_u , nodes_i)
-
         return self.criterion(scores , ratings)
-
 
 class Attention(nn.Module):
     def __init__(self , embedding_dims):
@@ -88,7 +83,6 @@ class Attention(nn.Module):
         x = self.att3(x)
         att = F.softmax(x , dim=0)
         return att
-
 
 class ui_aggregator(nn.Module):
     """
@@ -117,7 +111,6 @@ class ui_aggregator(nn.Module):
             r_history.append(self.history_r[int(node)])
 
         num_len = len(ui_history)
-
         embed_matrix = torch.empty(num_len , self.embed_dim , dtype = torch.float).to(self.device)
 
         for i in range(num_len):
@@ -152,9 +145,7 @@ class ui_aggregator(nn.Module):
             self_feats = self.i2e.weight[nodes]
         combined = torch.cat([self_feats , neigh_feats] , dim = 1)
         combined_feats = F.relu(self.linear1(combined))
-
         return combined_feats
-
 
 class social_aggregator(nn.Module):
     """
@@ -206,9 +197,9 @@ def train(model, device, train_loader, optimizer, epoch, best_rmse, best_mae):
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
-        if i % 50 == 0:
+        if i % 60 == 0:
             print('[%d, %5d] loss: %.3f, The best rmse/mae: %.6f / %.6f' % (
-                epoch, i, running_loss / 10, best_rmse, best_mae))
+                epoch, i, running_loss / 60, best_rmse, best_mae))
             running_loss = 0.0
 
     return 0
@@ -237,9 +228,9 @@ def main():
     if torch.cuda.is_available():
         use_cuda = True
     device = torch.device("cuda" if use_cuda else "cpu")
-    embed_dim = 64
+    embed_dim = 128
 
-    path_data = "ciao_dataset.pkl"
+    path_data = "dataset.pkl"
     data_file = open(path_data, 'rb')
     history_u, history_i, history_ur, history_ir, train_u, train_i, train_r,\
                  test_u, test_i, test_r, social_neighbor, ratings = pickle.load(data_file)
@@ -265,7 +256,7 @@ def main():
     best_mae = 9999.0
     endure_count = 0
  
-    for epoch in range(10):
+    for epoch in range(20):
 
         train(graphrec, device, train_loader, optimizer, epoch+1, best_rmse, best_mae)
         expected_rmse, mae = test(graphrec, device, test_loader)
