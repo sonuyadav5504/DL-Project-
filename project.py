@@ -1,6 +1,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import pickle
+import numpy as np
+import torch.utils.data
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
+from math import sqrt
+import os
+from utils import config
 
 class GraphRec(nn.Module):
     def __init__(self , num_users , num_items , num_ratings , history_u , history_i , history_ur ,\
@@ -185,3 +193,96 @@ class social_aggregator(nn.Module):
         combined_feats = F.relu(self.linear1(combined))
 
         return combined_feats
+
+
+############################################ run_graphrec ###########################################
+def train(model, device, train_loader, optimizer, epoch, best_rmse, best_mae):
+    model.train()
+    running_loss = 0.0
+    for i, data in enumerate(train_loader):
+        batch_nodes_u, batch_nodes_i, batch_ratings = data
+        optimizer.zero_grad()
+        loss = model.loss(batch_nodes_u.to(device), batch_nodes_i.to(device), batch_ratings.to(device))
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item()
+        if i % 50 == 0:
+            print('[%d, %5d] loss: %.3f, The best rmse/mae: %.6f / %.6f' % (
+                epoch, i, running_loss / 10, best_rmse, best_mae))
+            running_loss = 0.0
+
+    return 0
+
+def test(model, device, test_loader):
+    model.eval()
+    pred = []
+    target = []
+    with torch.no_grad():
+        for test_u, test_i, test_ratings in test_loader:
+            test_u, test_i, test_ratings = test_u.to(device), test_i.to(device), test_ratings.to(device)
+            scores = model(test_u, test_i)
+            pred.append(list(scores.cpu().numpy()))
+            target.append(list(test_ratings.cpu().numpy()))
+    pred = np.array(sum(pred, []))
+    target = np.array(sum(target, []))
+    rmse = sqrt(mean_squared_error(pred, target))
+    mae = mean_absolute_error(pred, target)
+
+    return rmse, mae
+
+
+def main():
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    use_cuda = False
+    if torch.cuda.is_available():
+        use_cuda = True
+    device = torch.device("cuda" if use_cuda else "cpu")
+    embed_dim = 64
+
+    path_data = "ciao_dataset.pkl"
+    data_file = open(path_data, 'rb')
+    history_u, history_i, history_ur, history_ir, train_u, train_i, train_r,\
+                 test_u, test_i, test_r, social_neighbor, ratings = pickle.load(data_file)
+
+    trainset = torch.utils.data.TensorDataset(torch.LongTensor(train_u), torch.LongTensor(train_i),
+                                              torch.FloatTensor(train_r))
+    
+    testset = torch.utils.data.TensorDataset(torch.LongTensor(test_u), torch.LongTensor(test_i),
+                                             torch.FloatTensor(test_r))
+
+    train_loader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(testset, batch_size=128, shuffle=True)
+    num_users = history_u.__len__()
+    num_items = history_i.__len__()
+    num_ratings = ratings.__len__()
+
+    # model
+    graphrec = GraphRec(num_users, num_items, num_ratings, history_u, history_i, history_ur,\
+                                     history_ir, embed_dim, social_neighbor, cuda=device).to(device)
+    optimizer = torch.optim.RMSprop(graphrec.parameters(), lr=0.01, alpha=0.9)
+
+    best_rmse = 9999.0
+    best_mae = 9999.0
+    endure_count = 0
+ 
+    for epoch in range(10):
+
+        train(graphrec, device, train_loader, optimizer, epoch+1, best_rmse, best_mae)
+        expected_rmse, mae = test(graphrec, device, test_loader)
+
+        # early stopping
+        if best_rmse > expected_rmse:
+            best_rmse = expected_rmse
+            best_mae = mae
+            endure_count = 0
+        else:
+            endure_count += 1
+        print("rmse: %.4f, mae:%.4f " % (expected_rmse, mae))
+
+        if endure_count > 5:
+            break
+    test_rmse, test_mae = test(graphrec, device, test_loader)   
+    print("test_rmse: %.4f, test_mae:%.4f " % (test_rmse, test_mae))
+
+if __name__ == "__main__":
+    main()
