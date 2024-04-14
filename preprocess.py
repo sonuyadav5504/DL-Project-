@@ -2,11 +2,12 @@ import pandas as pd
 import numpy as np
 import pickle as pkl
 from tqdm import tqdm
+import sys
 
 class Dataset(object):
     def __init__(self, neg_size=99):
         ratings = []
-        with open('ciao_rating_with_timestamp.txt') as f:
+        with open(sys.argv[1]+'.txt') as f:
             for l in f:
                 user, item, _, rating, _, timestamp = [int(float(_)) for _ in l.strip().split('  ')]
                 ratings.append({
@@ -22,23 +23,30 @@ class Dataset(object):
         self.ratings = ratings
 
         # test set
+        ################# if 80% training data ####################
         self.ratings['timerank'] = self.ratings.groupby('user')['timestamp'].rank(ascending=False).astype('int')
-        # print(ratings.tail(10))###########
         # count = 0
         # for i in ratings['timerank']:
         #     if i==2 or i==1 or i==3 or i==4:
         #         count+=1
-
-        self.ratings['test_mask'] = self.ratings['timerank'].isin([1, 2, 3, 4])
-
         # print(count)
-        # print(ratings.tail(10))
+        self.ratings['test_mask'] = self.ratings['timerank'].isin([1, 2, 3, 4])
 
         # remove items that only appear in test set
         items_selected = self.ratings[self.ratings['timerank'] > 4]['item'].unique()
         self.ratings = self.ratings[self.ratings['item'].isin(items_selected)].copy()
         users_selected = self.ratings[self.ratings['timerank'] > 4]['user'].unique()
         self.ratings = self.ratings[self.ratings['user'].isin(users_selected)].copy()
+
+        # ################### if 60% training data #######################
+        # self.ratings['timerank'] = self.ratings.groupby('user')['timestamp'].rank(ascending=False).astype('int')
+        # self.ratings['test_mask'] = self.ratings['timerank'].isin([1, 2, 3, 4, 5, 6, 7, 8])
+
+        # # remove items that only appear in test set
+        # items_selected = self.ratings[self.ratings['timerank'] > 8]['item'].unique()
+        # self.ratings = self.ratings[self.ratings['item'].isin(items_selected)].copy()
+        # users_selected = self.ratings[self.ratings['timerank'] > 8]['user'].unique()
+        # self.ratings = self.ratings[self.ratings['user'].isin(users_selected)].copy()
 
         # drop users and movies which do not exist in ratings
         self.users = self.ratings[['user']].drop_duplicates(subset=['user'],keep='first')
@@ -120,7 +128,7 @@ if __name__ == "__main__":
 
     social_neighbor = {}
     num_neighbor = 0
-    with open('ciao_trust.txt', 'r', encoding='utf-8') as f:
+    with open(sys.argv[2]+'.txt', 'r', encoding='utf-8') as f:
         for line in f:
             user1id, user2id = line.strip().split('  ')
             user1id, user2id = int(float(user1id)), int(float(user2id))
@@ -148,7 +156,7 @@ if __name__ == "__main__":
         test_rank[u] = {'pos': i, 'neg':neg_samples}
         
 
-    f = open('ciao_dataset.pkl', 'wb')
+    f = open('dataset.pkl', 'wb')
     data_content = (history_u, history_i, history_ur, history_ir, train_u, train_i, train_r,
                      test_u, test_i, test_r, social_neighbor, list(ratings_set))
     pkl.dump(data_content, f)
