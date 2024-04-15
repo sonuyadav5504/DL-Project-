@@ -66,11 +66,11 @@ class GraphRec(nn.Module):
 class Attention(nn.Module):
     def __init__(self , embedding_dims):
         super(Attention , self).__init__()
-        self.embed_dim = embedding_dims
-        self.bilinear = nn.Bilinear(self.embed_dim , self.embed_dim , 1)
-        self.att1 = nn.Linear(self.embed_dim * 2 , self.embed_dim)
-        self.att2 = nn.Linear(self.embed_dim , self.embed_dim)
-        self.att3 = nn.Linear(self.embed_dim , 1)
+        self.emb_dim = embedding_dims
+        self.bilinear = nn.Bilinear(self.emb_dim, self.emb_dim, 1)
+        self.att1 = nn.Linear(self.emb_dim * 2 , self.emb_dim)
+        self.att2 = nn.Linear(self.emb_dim , self.emb_dim)
+        self.att3 = nn.Linear(self.emb_dim , 1)
         self.softmax = nn.Softmax(0)
 
     def forward(self , node1 , u_rep , num_neighs):
@@ -85,9 +85,6 @@ class Attention(nn.Module):
         return att
 
 class ui_aggregator(nn.Module):
-    """
-    item and user aggregator: for aggregating embeddings of neighbors (item/user aggreagator).
-    """
     def __init__(self , i2e , r2e , u2e , embed_dim , history_ui , history_r , cuda = "cpu" , user = True):
         super(ui_aggregator, self).__init__()
         self.user = user
@@ -119,11 +116,9 @@ class ui_aggregator(nn.Module):
             tmp_label = r_history[i]
 
             if self.user == True:
-                # user component
                 e_ui = self.i2e.weight[history]
                 ui_rep = self.u2e.weight[nodes[i]]
             else:
-                # item component
                 e_ui = self.u2e.weight[history]
                 ui_rep = self.i2e.weight[nodes[i]]
 
@@ -148,9 +143,7 @@ class ui_aggregator(nn.Module):
         return combined_feats
 
 class social_aggregator(nn.Module):
-    """
-    social aggregator: for aggregating embeddings of social neighbors.
-    """
+  
     def __init__(self , features , u2e , embed_dim , social_neighbor , cuda = "cpu"):
         super(social_aggregator , self).__init__()
         self.features = features
@@ -187,7 +180,9 @@ class social_aggregator(nn.Module):
 
 
 ############################################ run_graphrec ###########################################
-def train(model, device, train_loader, optimizer, epoch, best_rmse, best_mae):
+def train(model, device, train_loader, 
+          optimizer, epoch, best_rmse, best_mae):
+    
     model.train()
     running_loss = 0.0
     for i, data in enumerate(train_loader):
@@ -221,7 +216,6 @@ def test(model, device, test_loader):
 
     return rmse, mae
 
-
 def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     use_cuda = False
@@ -247,10 +241,10 @@ def main():
     num_items = history_i.__len__()
     num_ratings = ratings.__len__()
 
-    # model
+    # GrapgRec Model
     graphrec = GraphRec(num_users, num_items, num_ratings, history_u, history_i, history_ur,\
                                      history_ir, embed_dim, social_neighbor, cuda=device).to(device)
-    optimizer = torch.optim.RMSprop(graphrec.parameters(), lr=0.01, alpha=0.9)
+    optimizer = torch.optim.Adam(graphrec.parameters(), lr=0.01, betas=(0.9, 0.999))
 
     best_rmse = 9999.0
     best_mae = 9999.0
@@ -261,7 +255,7 @@ def main():
         train(graphrec, device, train_loader, optimizer, epoch+1, best_rmse, best_mae)
         expected_rmse, mae = test(graphrec, device, test_loader)
 
-        # early stopping
+        # for early stopping
         if best_rmse > expected_rmse:
             best_rmse = expected_rmse
             best_mae = mae
