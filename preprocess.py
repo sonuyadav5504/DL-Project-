@@ -22,31 +22,31 @@ class Dataset(object):
         ratings = ratings.join(item_count, on='item')
         self.ratings = ratings
 
-        # test set
-        ################# if 80% training data ####################
-        self.ratings['timerank'] = self.ratings.groupby('user')['timestamp'].rank(ascending=False).astype('int')
-        # count = 0
-        # for i in ratings['timerank']:
-        #     if i==2 or i==1 or i==3 or i==4:
-        #         count+=1
-        # print(count)
-        self.ratings['test_mask'] = self.ratings['timerank'].isin([1, 2, 3, 4])
-
-        # remove items that only appear in test set
-        items_selected = self.ratings[self.ratings['timerank'] > 4]['item'].unique()
-        self.ratings = self.ratings[self.ratings['item'].isin(items_selected)].copy()
-        users_selected = self.ratings[self.ratings['timerank'] > 4]['user'].unique()
-        self.ratings = self.ratings[self.ratings['user'].isin(users_selected)].copy()
-
-        # ################### if 60% training data #######################
+        # # test set
+        # ################# if 80% training data ####################
         # self.ratings['timerank'] = self.ratings.groupby('user')['timestamp'].rank(ascending=False).astype('int')
-        # self.ratings['test_mask'] = self.ratings['timerank'].isin([1, 2, 3, 4, 5, 6, 7, 8])
+        # # count = 0
+        # # for i in ratings['timerank']:
+        # #     if i==2 or i==1 or i==3 or i==4:
+        # #         count+=1
+        # # print(count)
+        # self.ratings['test_mask'] = self.ratings['timerank'].isin([1, 2, 3, 4])
 
         # # remove items that only appear in test set
-        # items_selected = self.ratings[self.ratings['timerank'] > 8]['item'].unique()
+        # items_selected = self.ratings[self.ratings['timerank'] > 4]['item'].unique()
         # self.ratings = self.ratings[self.ratings['item'].isin(items_selected)].copy()
-        # users_selected = self.ratings[self.ratings['timerank'] > 8]['user'].unique()
+        # users_selected = self.ratings[self.ratings['timerank'] > 4]['user'].unique()
         # self.ratings = self.ratings[self.ratings['user'].isin(users_selected)].copy()
+
+        ################### if 60% training data #######################
+        self.ratings['timerank'] = self.ratings.groupby('user')['timestamp'].rank(ascending=False).astype('int')
+        self.ratings['test_mask'] = self.ratings['timerank'].isin([1, 2, 3, 4, 5, 6, 7, 8])
+
+        # remove items that only appear in test set
+        items_selected = self.ratings[self.ratings['timerank'] > 8]['item'].unique()
+        self.ratings = self.ratings[self.ratings['item'].isin(items_selected)].copy()
+        users_selected = self.ratings[self.ratings['timerank'] > 8]['user'].unique()
+        self.ratings = self.ratings[self.ratings['user'].isin(users_selected)].copy()
 
         # drop users and movies which do not exist in ratings
         self.users = self.ratings[['user']].drop_duplicates(subset=['user'],keep='first')
