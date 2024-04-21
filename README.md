@@ -1,10 +1,15 @@
 # DL-Project-
 Social Recommendation using Graph Neural Network
 
-##### For Preprocessing the data #####
-take both the dataset files from the dataset file and put it together with the preprocess.py 
-and then use bash to run it : ==>                                                                                                                                                 
-$ python3 preprocess.py
+------------------------------------------------------------------------------------------
 
-##### For Model (GraphRec) #####
-work on model is going on.
+## for running the Preprocessing code:
+     bash script: [ python3 preprocess.py ciao_rating_with_timestamp ciao_trust ] # for ciao dataset
+                  [ python3 preprocess.py epinion_rating_with_timestamp epinion_trust ] # for epinion dataset
+
+
+## for running the Project code :
+     bash script: [ python3 project.py ]
+     
+------------------------------------------------------------------------------------------
+
